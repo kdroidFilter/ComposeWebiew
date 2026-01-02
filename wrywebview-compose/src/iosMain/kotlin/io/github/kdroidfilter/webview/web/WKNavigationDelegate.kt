@@ -4,6 +4,7 @@ import io.github.kdroidfilter.webview.request.WebRequest
 import io.github.kdroidfilter.webview.request.WebRequestInterceptResult
 import io.github.kdroidfilter.webview.util.KLogger
 import kotlinx.cinterop.ObjCSignatureOverride
+import platform.Foundation.HTTPMethod
 import platform.Foundation.NSError
 import platform.Foundation.allHTTPHeaderFields
 import platform.WebKit.WKNavigation
