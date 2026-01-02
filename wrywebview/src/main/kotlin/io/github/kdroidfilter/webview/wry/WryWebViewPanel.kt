@@ -56,7 +56,11 @@ class WryWebViewPanel(
     override fun removeNotify() {
         log("removeNotify")
         stopCreateTimer()
-        scheduleDestroyIfNeeded()
+        if (IS_MAC) {
+            scheduleDestroyIfNeeded()
+        } else {
+            destroyIfNeeded()
+        }
         super.removeNotify()
     }
 
@@ -316,6 +320,43 @@ class WryWebViewPanel(
         val userAgent = customUserAgent
         val initialUrl = pendingUrl
         val handleSnapshot = parentHandle
+        if (!IS_MAC) {
+            return try {
+                webviewId =
+                    if (userAgent == null) {
+                        NativeBindings.createWebview(handleSnapshot, width, height, initialUrl)
+                    } else {
+                        NativeBindings.createWebviewWithUserAgent(handleSnapshot, width, height, initialUrl, userAgent)
+                    }
+                updateBounds()
+                startGtkPumpIfNeeded()
+                startWindowsPumpIfNeeded()
+                // Apply any pending content that requires an explicit call after creation.
+                val id = webviewId
+                val html = pendingHtml
+                val urlWithHeaders = pendingUrlWithHeaders
+                val headers = pendingHeaders
+                if (id != null) {
+                    when {
+                        html != null -> {
+                            pendingHtml = null
+                            NativeBindings.loadHtml(id, html)
+                        }
+                        urlWithHeaders != null && headers.isNotEmpty() -> {
+                            pendingUrlWithHeaders = null
+                            pendingHeaders = emptyMap()
+                            NativeBindings.loadUrlWithHeaders(id, urlWithHeaders, headers)
+                        }
+                    }
+                }
+                log("createIfNeeded success id=$webviewId")
+                true
+            } catch (e: RuntimeException) {
+                System.err.println("Failed to create Wry webview: ${e.message}")
+                e.printStackTrace()
+                true
+            }
+        }
         createInFlight = true
         stopCreateTimer()
         thread(name = "wry-webview-create", isDaemon = true) {
